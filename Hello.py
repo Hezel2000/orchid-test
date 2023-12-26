@@ -1,51 +1,43 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import streamlit as st
-from streamlit.logger import get_logger
+import requests
 
-LOGGER = get_logger(__name__)
+CLIENT_ID = "your_client_id"
+CLIENT_SECRET = "your_client_secret"
+REDIRECT_URI = "your_redirect_uri"
 
+# ORCID OAuth URLs
+AUTH_URL = "https://orcid.org/oauth/authorize"
+TOKEN_URL = "https://orcid.org/oauth/token"
 
-def run():
-    st.set_page_config(
-        page_title="Hello",
-        page_icon="👋",
-    )
+# Streamlit app
+st.title("ORCID Authentication Example")
 
-    st.write("# Welcome to Streamlit! 👋")
+# Authentication button
+if st.button("Login with ORCID"):
+    # Redirect user to ORCID for authentication
+    auth_params = {
+        'client_id': CLIENT_ID,
+        'response_type': 'code',
+        'scope': '/authenticate',
+        'redirect_uri': REDIRECT_URI
+    }
+    auth_url = f"{AUTH_URL}?{'&'.join([f'{key}={val}' for key, val in auth_params.items()])}"
+    st.experimental_set_query_params(code="")  # Clear previous code if any
+    st.markdown(f"[Click here to authenticate]({auth_url})")
 
-    st.sidebar.success("Select a demo above.")
+# Handle authentication callback
+code = st.experimental_get_query_params().get("code", None)
+if code:
+    # Exchange code for access token
+    token_data = {
+        'client_id': CLIENT_ID,
+        'client_secret': CLIENT_SECRET,
+        'grant_type': 'authorization_code',
+        'code': code,
+        'redirect_uri': REDIRECT_URI
+    }
+    response = requests.post(TOKEN_URL, data=token_data)
+    access_token = response.json().get('access_token', None)
 
-    st.markdown(
-        """
-        Streamlit is an open-source app framework built specifically for
-        Machine Learning and Data Science projects.
-        **👈 Select a demo from the sidebar** to see some examples
-        of what Streamlit can do!
-        ### Want to learn more?
-        - Check out [streamlit.io](https://streamlit.io)
-        - Jump into our [documentation](https://docs.streamlit.io)
-        - Ask a question in our [community
-          forums](https://discuss.streamlit.io)
-        ### See more complex demos
-        - Use a neural net to [analyze the Udacity Self-driving Car Image
-          Dataset](https://github.com/streamlit/demo-self-driving)
-        - Explore a [New York City rideshare dataset](https://github.com/streamlit/demo-uber-nyc-pickups)
-    """
-    )
+    # Use access_token for further API requests
 
-
-if __name__ == "__main__":
-    run()
